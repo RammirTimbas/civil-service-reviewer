@@ -1,0 +1,14 @@
+flask
+flask-cors
+pymongo
+flask-pymongo
+dnspython
+python-dotenv
+pyjwt
+flask-bcrypt
+requests
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+marshmallow
+flask-restful

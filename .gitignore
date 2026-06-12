@@ -1,0 +1,8 @@
+/shelf/
+/workspace.xml
+frontend/node_modules/
+frontend/.next/
+.env
+build/
+dist/
+coverage/
