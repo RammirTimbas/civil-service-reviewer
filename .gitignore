@@ -5,6 +5,7 @@ frontend/.next/
 .env
 build/
 dist/
+.idea/
 coverage/
 # Byte-compiled / optimized / DLL files
 __pycache__/

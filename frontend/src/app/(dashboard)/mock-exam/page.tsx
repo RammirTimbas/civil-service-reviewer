@@ -1,18 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useMockExam } from '@/hooks/use-questions'
 import { QuestionCard } from '@/components/exam/question-card'
 import { Button } from '@/components/ui/button'
-import { Loader2, Timer, AlertCircle, Trophy, Home, Search } from 'lucide-react'
+import { Loader2, Timer, AlertCircle, Trophy, Home, Search, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useExamStore } from '@/store/use-exam-store'
 import { useRouter } from 'next/navigation'
 import api from '@/lib/api-client'
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
 
 export default function MockExamPage() {
   const router = useRouter()
-  const { data: questions, isLoading, refetch } = useMockExam()
   const {
     currentQuestionIndex,
     nextQuestion,
@@ -24,86 +24,47 @@ export default function MockExamPage() {
     tick,
     isCompleted,
     finishSession,
-    resetSession
+    resetSession,
+    currentQuestions
   } = useExamStore()
-  const { currentQuestions } = useExamStore()
 
   const [isStarted, setIsStarted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [results, setResults] = useState<{ score: number, total: number } | null>(null)
 
   const handleStart = () => {
-    // If user is not authenticated, fall back to client-side question fetch
     setIsSubmitting(true)
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-    console.log('MockExam: starting, token present?', !!token)
+
     if (!token) {
-      // fetch mock questions without creating a server session
       api.get('/questions/mock')
         .then((res) => {
-          console.log('MockExam: /questions/mock response', res)
           if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
             startSession(res.data, 'Mock', 60 * 60)
-            useExamStore.getState().setSessionId(null)
             setIsStarted(true)
-          } else {
-            console.warn('MockExam: /questions/mock returned empty or unexpected format', res?.data)
-            alert('No questions available for mock exam.')
           }
         })
-        .catch((err) => {
-          console.error('Failed to load mock questions (unauthenticated)', err)
-          alert('Failed to load mock exam. Please try again or sign in.')
-        })
+        .catch(() => alert('Failed to load mock exam.'))
         .finally(() => setIsSubmitting(false))
       return
     }
 
-    // Create a server-side exam session and fetch questions when authenticated
     api.post('/exams/start', { type: 'Mock' })
       .then((res) => {
-        console.log('MockExam: /exams/start response', res)
         if (res && res.data) {
           const questionsPayload = res.data.questions || res.data
           if (Array.isArray(questionsPayload) && questionsPayload.length > 0) {
             startSession(questionsPayload, 'Mock', 60 * 60)
-            useExamStore.getState().setSessionId(res.data.session_id || null)
             setIsStarted(true)
-          } else {
-            console.warn('MockExam: /exams/start returned no questions; falling back to /questions/mock', res.data)
-            // Attempt client-side fetch as a fallback when server session lacks questions
-            api.get('/questions/mock')
-              .then((r) => {
-                console.log('MockExam: fallback /questions/mock response', r)
-                if (r && r.data && Array.isArray(r.data) && r.data.length > 0) {
-                  startSession(r.data, 'Mock', 60 * 60)
-                  useExamStore.getState().setSessionId(res.data.session_id || null)
-                  setIsStarted(true)
-                } else {
-                  alert('No questions available for mock exam.')
-                }
-              })
-              .catch((err) => {
-                console.error('MockExam: fallback fetch failed', err)
-                alert('Failed to start exam. Please try again later.')
-              })
           }
         }
       })
-      .catch((err) => {
-        if (err?.response) {
-          console.error('Failed to start exam', err.response.data)
-        } else {
-          console.error('Failed to start exam', err)
-        }
-        alert('Failed to start exam. Please try again.')
-      })
+      .catch(() => alert('Failed to start exam.'))
       .finally(() => setIsSubmitting(false))
   }
 
   const handleSubmit = async () => {
-    if (!confirm('Are you sure you want to submit the exam?')) return
-
+    if (!confirm('Submit exam?')) return
     setIsSubmitting(true)
     try {
       const response = await api.post('/exams/submit', {
@@ -114,8 +75,7 @@ export default function MockExamPage() {
       setResults(response.data)
       finishSession()
     } catch (error) {
-      console.error('Submission failed', error)
-      alert('Failed to submit exam. Please check your connection.')
+      alert('Submission failed.')
     } finally {
       setIsSubmitting(false)
     }
@@ -124,9 +84,7 @@ export default function MockExamPage() {
   useEffect(() => {
     let timer: NodeJS.Timeout
     if (isStarted && !isCompleted && timeLeft > 0) {
-      timer = setInterval(() => {
-        tick()
-      }, 1000)
+      timer = setInterval(() => tick(), 1000)
     } else if (timeLeft === 0 && isStarted && !isCompleted) {
       handleSubmit()
     }
@@ -141,187 +99,148 @@ export default function MockExamPage() {
 
   if (!isStarted) {
     return (
-      <div className="max-w-2xl mx-auto text-center space-y-8 py-12">
-        <div className="space-y-4">
-          <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto">
-            <Timer className="w-10 h-10" />
+      <div className="max-w-md mx-auto py-10 px-4">
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-6">
+          <div className="space-y-3">
+            <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+              <Timer className="w-8 h-8" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Mock Exam</h1>
+            <p className="text-xs text-slate-500 font-medium">Full simulation under real conditions.</p>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">Mock Exam Simulation</h1>
-          <p className="text-slate-600">
-            Real CSC exam simulation. 1 hour, randomized categories, no hints.
-          </p>
-        </div>
 
-        <div className="bg-white p-6 rounded-xl border border-slate-200 text-left space-y-4">
-          <h3 className="font-bold text-slate-900 flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-amber-500" />
-            Rules & Guidelines
-          </h3>
-          <ul className="space-y-2 text-sm text-slate-600 list-disc pl-5">
-            <li>Timer starts as soon as you click "Start Exam".</li>
-            <li>You can go back and forth between questions.</li>
-            <li>Unanswered questions will be marked as incorrect.</li>
-          </ul>
-        </div>
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-soft text-left space-y-4">
+            <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2 uppercase tracking-widest">
+              <AlertCircle className="w-4 h-4 text-amber-500" />
+              Guidelines
+            </h3>
+            <div className="space-y-3">
+              {[
+                { title: 'Time Limit', desc: '60 minutes total.', icon: Timer },
+                { title: 'Navigation', desc: 'Jump between questions.', icon: Search },
+                { title: 'Final Review', desc: 'Explanations hidden during test.', icon: X }
+              ].map((item) => (
+                <div key={item.title} className="flex gap-3">
+                  <item.icon className="w-3.5 h-3.5 text-slate-400 mt-0.5" />
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-700 leading-none mb-1">{item.title}</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-        <Button
-          onClick={handleStart}
-          disabled={isLoading}
-          className="w-full py-6 text-lg bg-blue-600 hover:bg-blue-700 font-bold"
-        >
-          {isLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : 'Start Exam'}
-        </Button>
+          <Button
+            onClick={handleStart}
+            disabled={isSubmitting}
+            className="w-full h-12 rounded-xl text-sm bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-soft transition-transform active:scale-95"
+          >
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : 'Begin Simulation'}
+          </Button>
+          <Link href="/dashboard" className="block text-[11px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest">
+             Maybe Later
+          </Link>
+        </motion.div>
       </div>
     )
   }
 
   if (isCompleted && results) {
     const percentage = Math.round((results.score / results.total) * 100)
-
     return (
-      <div className="max-w-2xl mx-auto text-center space-y-8 py-12 animate-in fade-in duration-700">
-        <div className="space-y-4">
-          <div className="w-24 h-24 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto shadow-2xl">
-            <Trophy className="w-12 h-12" />
-          </div>
-          <h1 className="text-4xl font-extrabold text-slate-900">Well Done!</h1>
-        </div>
-
-        <div className="bg-white p-10 rounded-3xl border border-slate-200 shadow-xl space-y-6">
-          <div className="flex justify-around items-center">
-            <div className="text-center">
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Score</p>
-              <p className="text-5xl font-black text-slate-900">{results.score}<span className="text-slate-300 text-2xl font-normal ml-1">/{results.total}</span></p>
+      <div className="max-w-md mx-auto py-10 px-4">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-6">
+          <div className="space-y-3">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-[2rem] flex items-center justify-center mx-auto shadow-soft rotate-3">
+              <Trophy className="w-10 h-10" />
             </div>
-            <div className="h-16 w-px bg-slate-100" />
-            <div className="text-center">
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Accuracy</p>
-              <p className={cn(
-                "text-5xl font-black",
-                percentage >= 80 ? "text-green-500" : percentage >= 50 ? "text-blue-500" : "text-red-500"
-              )}>
-                {percentage}%
-              </p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Complete!</h1>
+          </div>
+
+          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-soft space-y-6">
+            <div className="flex justify-around items-center">
+              <div className="text-center">
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Score</p>
+                <p className="text-3xl font-bold text-slate-900">{results.score}<span className="text-slate-200 text-xl">/{results.total}</span></p>
+              </div>
+              <div className="h-10 w-px bg-slate-100" />
+              <div className="text-center">
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Result</p>
+                <p className={cn("text-3xl font-bold", percentage >= 80 ? "text-emerald-500" : "text-blue-500")}>
+                  {percentage}%
+                </p>
+              </div>
             </div>
+            <p className="text-[11px] font-medium text-slate-500 leading-relaxed px-2">
+               {percentage >= 80 ? "Exceptional work! You're ready." : "Solid effort. Keep practicing your weak areas."}
+            </p>
           </div>
 
-          <div className="pt-6 border-t border-slate-50">
-             <p className="text-slate-600 text-sm">
-               {percentage >= 80 ? "Excellent work! You are ready for the real thing." : "Good try! Keep practicing to improve your score."}
-             </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="outline" size="sm" onClick={() => { resetSession(); setIsStarted(false); router.push('/dashboard'); }} className="h-11 rounded-xl font-bold text-xs border-slate-200">
+              <Home className="w-3.5 h-3.5 mr-2" /> Dashboard
+            </Button>
+            <Button size="sm" className="h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-soft">
+              <Search className="w-3.5 h-3.5 mr-2" /> Review
+            </Button>
           </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Button
-            onClick={() => {
-                resetSession()
-                setIsStarted(false)
-                router.push('/dashboard')
-            }}
-            variant="outline"
-            className="flex-1 py-6 rounded-xl"
-          >
-            <Home className="w-4 h-4 mr-2" />
-            Back to Home
-          </Button>
-          <Button className="flex-1 py-6 bg-blue-600 hover:bg-blue-700 rounded-xl">
-            <Search className="w-4 h-4 mr-2" />
-            Review Answers
-          </Button>
-        </div>
+        </motion.div>
       </div>
     )
   }
 
   const currentQuestion = currentQuestions[currentQuestionIndex]
-
-  if (!currentQuestion) {
-    return (
-      <div className="max-w-2xl mx-auto text-center space-y-6 py-12">
-        <div className="space-y-4">
-          <h1 className="text-2xl font-bold text-slate-900">No questions loaded</h1>
-          <p className="text-slate-600">Please start the exam to load questions.</p>
-        </div>
-        <div className="pt-6">
-          <Button onClick={handleStart} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3">Start Exam</Button>
-        </div>
-      </div>
-    )
-  }
+  if (!currentQuestion) return null
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="sticky top-4 z-40 bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/60 shadow-lg flex items-center justify-between">
-        <div className="flex items-center gap-6">
-            <div className="flex flex-col">
-                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Question</span>
-                <span className="font-black text-slate-900">{currentQuestionIndex + 1} / {currentQuestions.length}</span>
+    <div className="max-w-xl mx-auto flex flex-col min-h-[calc(100vh-120px)] md:min-h-0">
+      <div className="sticky top-14 md:top-14 z-40 bg-slate-50/90 backdrop-blur-md py-3 mb-2">
+        <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+                <div className="flex flex-col">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Progress</span>
+                    <span className="font-bold text-slate-900 leading-none text-xs">{currentQuestionIndex + 1} / {currentQuestions.length}</span>
+                </div>
+                <div className="h-7 w-px bg-slate-200" />
+                <div className="flex flex-col">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Time</span>
+                    <span className={cn("font-mono font-bold text-xs tabular-nums leading-none", timeLeft < 300 ? "text-rose-500" : "text-blue-600")}>
+                        {formatTime(timeLeft)}
+                    </span>
+                </div>
             </div>
-            <div className="flex flex-col">
-                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Time Remaining</span>
-                <span className={cn(
-                    "font-mono font-black text-lg tabular-nums",
-                    timeLeft < 300 ? "text-red-500 animate-pulse" : "text-blue-600"
-                )}>
-                    {formatTime(timeLeft)}
-                </span>
-            </div>
-        </div>
-
-        <div className="flex gap-2">
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={prevQuestion}
-                disabled={currentQuestionIndex === 0}
-                className="rounded-lg h-9"
-            >
-                Prev
-            </Button>
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={nextQuestion}
-                disabled={currentQuestionIndex === currentQuestions.length - 1}
-                className="rounded-lg h-9"
-            >
-                Next
-            </Button>
-            <Button
-                className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg h-9 px-4"
-                size="sm"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-            >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Finish Exam'}
+            <Button size="sm" className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg h-8 px-4 text-[10px] uppercase tracking-wider" onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : 'Submit Exam'}
             </Button>
         </div>
       </div>
 
-      <QuestionCard
-        question={currentQuestion}
-        mode="Mock"
-        onAnswer={(index) => answerQuestion(currentQuestion.id, index)}
-        selectedAnswer={userAnswers[currentQuestion.id]}
-      />
+      <div className="flex-1 pb-20 md:pb-6">
+        <QuestionCard question={currentQuestion} mode="Mock" onAnswer={(idx) => answerQuestion(currentQuestion.id, idx)} selectedAnswer={userAnswers[currentQuestion.id]} />
 
-      {/* Progress Bar */}
-      <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 p-4 bg-white rounded-2xl border border-slate-200">
-        {currentQuestions.map((q, idx) => (
-          <button
-            key={q.id}
-            onClick={() => useExamStore.setState({ currentQuestionIndex: idx })}
-            className={cn(
-              "h-10 rounded-lg text-xs font-bold border transition-all",
-              idx === currentQuestionIndex ? "border-blue-600 bg-blue-50 text-blue-600 ring-4 ring-blue-50" :
-              userAnswers[q.id] !== undefined ? "bg-slate-900 border-slate-900 text-white" :
-              "border-slate-100 text-slate-300 hover:border-slate-300"
-            )}
-          >
-            {idx + 1}
-          </button>
-        ))}
+        {/* Compact Navigation Grid */}
+        <div className="mt-6 flex flex-wrap gap-1.5 justify-center">
+          {currentQuestions.map((q, idx) => (
+            <button key={q.id} onClick={() => useExamStore.setState({ currentQuestionIndex: idx })} className={cn(
+              "w-7 h-7 rounded-md text-[9px] font-bold border transition-all",
+              idx === currentQuestionIndex ? "border-blue-600 bg-blue-50 text-blue-600" : userAnswers[q.id] !== undefined ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-100 text-slate-300"
+            )}>
+              {idx + 1}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="fixed bottom-14 left-0 right-0 md:relative md:bottom-auto bg-white/90 backdrop-blur-md border-t border-slate-100 p-3 md:bg-transparent md:border-0 md:p-0 md:mt-4">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
+          <Button variant="ghost" size="sm" onClick={prevQuestion} disabled={currentQuestionIndex === 0} className="h-9 px-4 rounded-lg font-bold text-slate-500 text-xs">
+            <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Prev
+          </Button>
+          <Button onClick={nextQuestion} disabled={currentQuestionIndex === currentQuestions.length - 1} className="h-9 px-6 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-soft flex-1 sm:flex-none">
+            Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
+          </Button>
+        </div>
       </div>
     </div>
   )

@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 40% 98%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -25,52 +25,49 @@
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
   }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-  }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-none transition-all duration-200;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-[#F8FAFC] text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
   }
 }
 
-/* Base font sizing to ensure consistent scale across browsers */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm;
+  }
+  .shadow-elegant {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 4px 12px rgba(0,0,0,0.03);
+  }
+  .card-density {
+    @apply p-3 md:p-4 rounded-xl border border-slate-200/60 bg-white shadow-elegant;
+  }
+}
+
 html {
-  font-size: 16px;
+  font-size: 14px;
 }
 
-/* Utility for auth pages to reduce excessive side whitespace */
-.auth-card {
-  max-width: 42rem; /* matches Tailwind's 2xl (672px) */
+@media (min-width: 768px) {
+  html {
+    font-size: 15px;
+  }
 }
 
-/* Slightly reduce default button padding when used with auth forms */
-.auth-btn {
-  padding-top: 0.625rem; /* 10px */
-  padding-bottom: 0.625rem;
-  font-size: 1rem; /* 16px */
+@media (min-width: 1280px) {
+  html {
+    font-size: 15.5px;
+  }
 }

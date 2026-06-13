@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useQuestions } from '@/hooks/use-questions'
 import { QuestionCard } from '@/components/exam/question-card'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, Loader2, BookOpen } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, BookOpen, X } from 'lucide-react'
 import { useExamStore } from '@/store/use-exam-store'
+import Link from 'next/link'
 
 export default function LearnModePage() {
   const { data: questions, isLoading } = useQuestions()
@@ -26,87 +27,99 @@ export default function LearnModePage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600/80" />
+          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Loading questions...</p>
+        </div>
       </div>
     )
   }
 
   if (!questions || questions.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-slate-500">No questions found. Check back later!</p>
+      <div className="text-center py-20 px-4">
+        <div className="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+          <BookOpen className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">No questions found</h2>
+        <p className="text-xs text-slate-500 mb-6">We couldn't find any questions for this category.</p>
+        <Link href="/dashboard">
+          <Button variant="outline" size="sm" className="rounded-lg text-xs font-bold">Return to Dashboard</Button>
+        </Link>
       </div>
     )
   }
 
   const currentQuestion = questions[currentQuestionIndex]
   const hasAnswered = !!userAnswers[currentQuestion.id]
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-blue-50 p-4 rounded-xl border border-blue-100">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600 rounded-lg text-white">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="font-bold text-slate-900">Learn Mode</h1>
-            <p className="text-xs text-slate-600">Study each question with detailed explanations.</p>
-          </div>
+    <div className="max-w-xl mx-auto flex flex-col min-h-[calc(100vh-120px)] md:min-h-0">
+      {/* Tightened Progress Header */}
+      <div className="sticky top-14 md:top-14 z-30 bg-slate-50/80 backdrop-blur-sm py-3 mb-2 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+           <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                Module: Verbal Ability
+              </span>
+              <span className="text-[10px] font-bold text-slate-400">
+                {currentQuestionIndex + 1} of {questions.length}
+              </span>
+           </div>
+           <Link href="/dashboard" className="text-slate-400 hover:text-slate-600 transition-colors">
+              <X className="w-4 h-4" />
+           </Link>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-slate-700">
-            Progress: {currentQuestionIndex + 1} / {questions.length}
-          </span>
-          <div className="w-32 bg-slate-200 h-2 rounded-full overflow-hidden">
-            <div
-              className="bg-blue-600 h-full transition-all duration-300"
-              style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-            />
-          </div>
+        <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
+          <div
+            className="bg-blue-600 h-full transition-all duration-500 ease-out shadow-[0_0_8px_rgba(37,99,235,0.4)]"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
 
-      <QuestionCard
-        question={currentQuestion}
-        mode="Learn"
-        onAnswer={(index) => answerQuestion(currentQuestion.id, index)}
-        showFeedback={hasAnswered}
-        selectedAnswer={userAnswers[currentQuestion.id]}
-      />
+      {/* Main Content Area */}
+      <div className="flex-1 pb-20 md:pb-6">
+        <QuestionCard
+          question={currentQuestion}
+          mode="Learn"
+          onAnswer={(index) => answerQuestion(currentQuestion.id, index)}
+          showFeedback={hasAnswered}
+          selectedAnswer={userAnswers[currentQuestion.id]}
+        />
+      </div>
 
-      <div className="flex items-center justify-between pt-4">
-        <Button
-          variant="outline"
-          onClick={prevQuestion}
-          disabled={currentQuestionIndex === 0}
-          className="flex items-center gap-2"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Previous
-        </Button>
+      {/* Compact Navigation Controls */}
+      <div className="fixed bottom-14 left-0 right-0 md:relative md:bottom-auto bg-white/90 backdrop-blur-md border-t border-slate-100 p-3 md:bg-transparent md:border-0 md:p-0 md:mt-4">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={prevQuestion}
+            disabled={currentQuestionIndex === 0}
+            className="h-9 px-4 rounded-lg font-bold text-slate-500 hover:bg-slate-100 disabled:opacity-30 text-xs"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Previous
+          </Button>
 
-        <div className="hidden sm:flex gap-1">
-          {questions.map((_, idx) => (
-            <div
-              key={idx}
-              className={`w-2 h-2 rounded-full ${
-                idx === currentQuestionIndex ? 'bg-blue-600' :
-                userAnswers[questions[idx].id] !== undefined ? 'bg-green-400' : 'bg-slate-200'
-              }`}
-            />
-          ))}
+          <div className="hidden sm:flex items-center gap-1">
+             {questions.slice(0, 10).map((_, i) => (
+                <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === currentQuestionIndex ? 'bg-blue-600' : 'bg-slate-200'}`} />
+             ))}
+          </div>
+
+          <Button
+            onClick={nextQuestion}
+            disabled={!hasAnswered || currentQuestionIndex === questions.length - 1}
+            className="h-9 px-6 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-soft disabled:opacity-50"
+          >
+            {currentQuestionIndex === questions.length - 1 ? 'Finish' : 'Next'}
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
         </div>
-
-        <Button
-          onClick={nextQuestion}
-          disabled={currentQuestionIndex === questions.length - 1}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-        >
-          Next
-          <ChevronRight className="w-4 h-4" />
-        </Button>
       </div>
     </div>
   )
