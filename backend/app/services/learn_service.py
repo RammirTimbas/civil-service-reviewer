@@ -3,12 +3,21 @@ from bson.objectid import ObjectId
 
 class LearnService:
     @staticmethod
-    def get_learn_session(category=None):
+    def get_learn_session(category=None, subcategory=None):
         query = {"learning_metadata": {"$exists": True}}
         if category:
             query["category"] = category
+        # `get_available_topics` maps missing/null subcategory to the display
+        # name "General". If the frontend sends "General", interpret this
+        # as documents where `subcategory` is missing or null instead of the
+        # literal string "General".
+        if subcategory:
+            if subcategory == "General":
+                query["$or"] = [{"subcategory": {"$exists": False}}, {"subcategory": None}]
+            else:
+                query["subcategory"] = subcategory
 
-        # Get a random question with learning metadata
+        # Get a random question with learning metadata matching the criteria
         pipeline = [
             {"$match": query},
             {"$sample": {"size": 1}}
@@ -31,7 +40,6 @@ class LearnService:
                 try:
                     obj_ids.append(ObjectId(rid))
                 except:
-                    # In case they are stored as strings or don't exist
                     pass
 
             if obj_ids:
@@ -45,3 +53,26 @@ class LearnService:
             "primary_question": primary,
             "reinforcement_questions": reinforcements
         }
+
+    @staticmethod
+    def get_available_topics(category=None):
+        """Returns a list of subcategories that have learning modules."""
+        query = {"learning_metadata": {"$exists": True}}
+        if category:
+            query["category"] = category
+
+        pipeline = [
+            {"$match": query},
+            {"$group": {
+                "_id": "$subcategory",
+                "count": {"$sum": 1},
+                "titles": {"$addToSet": "$learning_metadata.concept.title"}
+            }},
+            {"$project": {
+                "name": {"$ifNull": ["$_id", "General"]},
+                "count": 1,
+                "display_title": {"$arrayElemAt": ["$titles", 0]},
+                "_id": 0
+            }}
+        ]
+        return list(mongo.db.questions.aggregate(pipeline))

@@ -14,13 +14,23 @@ import {
   Target,
   AlertCircle,
   ArrowLeft,
-  Trophy
+  Trophy,
+  LayoutGrid,
+  Sparkles
 } from 'lucide-react'
 import api from '@/lib/api-client'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { QuestionCard } from '@/components/exam/question-card'
+
+type Category = 'Verbal Ability' | 'Numerical Reasoning' | 'Analytical Ability' | 'Clerical Operations' | 'General Information';
+
+interface Topic {
+  name: string;
+  display_title: string;
+  count: number;
+}
 
 export default function LearnModePage() {
   const {
@@ -37,26 +47,132 @@ export default function LearnModePage() {
     reset
   } = useLearnStore()
 
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Selection State
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
+  const [topics, setTopics] = useState<Topic[]>([])
+  const [loadingTopics, setLoadingTopics] = useState(false)
+
+  const categories: { name: Category; icon: any; color: string }[] = [
+    { name: 'Verbal Ability', icon: BookOpen, color: 'text-blue-600' },
+    { name: 'Numerical Reasoning', icon: Target, color: 'text-emerald-600' },
+    { name: 'Analytical Ability', icon: Lightbulb, color: 'text-purple-600' },
+    { name: 'Clerical Operations', icon: LayoutGrid, color: 'text-orange-600' },
+    { name: 'General Information', icon: Sparkles, color: 'text-amber-600' },
+  ]
+
+  // Reset store when component unmounts
   useEffect(() => {
-    async function initSession() {
-      try {
-        setLoading(true)
-        // Fixed: Use '/learn/session' because the base URL already includes '/api'
-        const response = await api.get('/learn/session')
-        startSession(response.data)
-      } catch (err) {
-        console.error('Failed to load learn session', err)
-        setError('No learning modules available for this category yet.')
-      } finally {
-        setLoading(false)
-      }
-    }
-    initSession()
     return () => reset()
-  }, [startSession, reset])
+  }, [reset])
+
+  const fetchTopics = async (category: Category) => {
+    try {
+      setLoadingTopics(true)
+      setSelectedCategory(category)
+      const response = await api.get(`/learn/topics?category=${encodeURIComponent(category)}`)
+      setTopics(response.data)
+    } catch (err) {
+      console.error('Failed to load topics', err)
+    } finally {
+      setLoadingTopics(false)
+    }
+  }
+
+  const startLearningTopic = async (topicName: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await api.get(`/learn/session?category=${encodeURIComponent(selectedCategory!)}&subcategory=${encodeURIComponent(topicName)}`)
+      startSession(response.data)
+    } catch (err) {
+      console.error('Failed to load learn session', err)
+      setError('Could not start this module. Please try another topic.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 1. Category Selection View
+  if (!selectedCategory && !primaryQuestion) {
+    return (
+      <div className="max-w-xl mx-auto py-8 px-4 space-y-8">
+        <div className="space-y-2 text-center">
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">What do you want to learn?</h1>
+          <p className="text-sm text-slate-500 font-medium">Select a category to see available mental models.</p>
+        </div>
+
+        <div className="grid gap-3">
+          {categories.map((cat) => (
+            <button
+              key={cat.name}
+              onClick={() => fetchTopics(cat.name)}
+              className="group flex items-center justify-between p-5 bg-white border border-slate-200 rounded-2xl hover:border-blue-500 hover:shadow-md transition-all text-left"
+            >
+              <div className="flex items-center gap-4">
+                <div className={cn("w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center group-hover:scale-110 transition-transform", cat.color)}>
+                  <cat.icon className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800">{cat.name}</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Master core concepts</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // 2. Topic Selection View
+  if (selectedCategory && !primaryQuestion && !loading) {
+    return (
+      <div className="max-w-xl mx-auto py-8 px-4 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedCategory(null)} className="rounded-full">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back
+          </Button>
+          <h2 className="font-black text-slate-900">{selectedCategory} Topics</h2>
+        </div>
+
+        {loadingTopics ? (
+          <div className="flex h-[30vh] items-center justify-center">
+             <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+          </div>
+        ) : topics.length === 0 ? (
+          <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center">
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No modules found yet</p>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {topics.map((topic) => (
+              <button
+                key={topic.name}
+                onClick={() => startLearningTopic(topic.name)}
+                className="p-5 bg-white border border-slate-200 rounded-2xl hover:border-blue-500 shadow-sm text-left group transition-all"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-bold text-lg text-slate-800 group-hover:text-blue-600 transition-colors">
+                    {topic.display_title || topic.name}
+                  </h3>
+                  <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                    {topic.count} {topic.count === 1 ? 'Module' : 'Modules'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                  Deep-dive into the core patterns and heuristics of {topic.name.toLowerCase()}.
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -75,9 +191,18 @@ export default function LearnModePage() {
         </div>
         <h2 className="text-lg font-bold text-slate-900 mb-1">Module Unavailable</h2>
         <p className="text-xs text-slate-500 mb-6">{error || "Check back soon for new content."}</p>
-        <Link href="/dashboard">
-          <Button variant="outline" size="sm" className="rounded-lg font-bold">Return to Dashboard</Button>
-        </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-lg font-bold"
+          onClick={() => {
+            setError(null);
+            setSelectedCategory(null);
+            reset();
+          }}
+        >
+          Try Another Category
+        </Button>
       </div>
     )
   }
@@ -100,9 +225,9 @@ export default function LearnModePage() {
               {metadata.concept.title}
             </span>
           </div>
-          <Link href="/dashboard" className="text-slate-300 hover:text-slate-600 transition-colors">
+          <button onClick={() => reset()} className="text-slate-300 hover:text-slate-600 transition-colors">
             <X className="w-4 h-4" />
-          </Link>
+          </button>
         </div>
         <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
           <motion.div
@@ -315,14 +440,22 @@ export default function LearnModePage() {
             </div>
 
             <div className="flex flex-col gap-2.5 max-w-[280px] mx-auto pt-4">
-              <Button onClick={() => window.location.reload()} className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg transition-all active:scale-[0.98]">
+              <Button onClick={() => {
+                reset();
+                startLearningTopic(primaryQuestion.subcategory || "");
+              }} className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg transition-all active:scale-[0.98]">
                 Start Next Concept
               </Button>
-              <Link href="/dashboard" className="block">
-                <Button variant="outline" className="w-full h-11 rounded-xl font-bold uppercase text-[10px] tracking-widest border-slate-200 text-slate-500 hover:text-slate-700">
-                  Return to Dashboard
-                </Button>
-              </Link>
+              <Button
+                onClick={() => {
+                  reset();
+                  setSelectedCategory(null);
+                }}
+                variant="outline"
+                className="w-full h-11 rounded-xl font-bold uppercase text-[10px] tracking-widest border-slate-200 text-slate-500 hover:text-slate-700"
+              >
+                Change Topic
+              </Button>
             </div>
           </motion.div>
         )}
