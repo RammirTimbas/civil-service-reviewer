@@ -14,12 +14,13 @@ import { cn } from '@/lib/utils'
 type Tab = 'profile' | 'security' | 'notifications'
 
 export default function SettingsPage() {
-  const { user, setAuth, logout } = useAuthStore()
+  const { user, setAuth, logout, token } = useAuthStore()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('profile')
   const [name, setName] = useState(user?.name || '')
   const [isUpdating, setIsUpdating] = useState(false)
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const [signoutToast, setSignoutToast] = useState<string | null>(null)
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,7 +29,7 @@ export default function SettingsPage() {
     try {
       await api.put('/users/me', { name })
       if (user) {
-        setAuth({ ...user, name }, localStorage.getItem('token') || '')
+        setAuth({ ...user, name }, token || '')
       }
       setStatus({ type: 'success', message: 'Profile updated successfully!' })
     } catch (error) {
@@ -40,7 +41,12 @@ export default function SettingsPage() {
 
   const handleLogout = () => {
     logout()
-    router.push('/login')
+    setSignoutToast('Signed out successfully')
+    // Give user a short confirmation before redirecting to root
+    setTimeout(() => {
+      setSignoutToast(null)
+      router.push('/')
+    }, 900)
   }
 
   const tabs = [
@@ -200,6 +206,13 @@ export default function SettingsPage() {
           </AnimatePresence>
         </div>
       </div>
+      {signoutToast && (
+        <div className="fixed left-4 bottom-6 z-50">
+          <div className="bg-slate-900 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-semibold">
+            {signoutToast}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

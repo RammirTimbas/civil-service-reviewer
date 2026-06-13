@@ -20,7 +20,7 @@ def create_app(config_name=None):
     if isinstance(origins, str) and ',' in origins:
         origins = [o.strip() for o in origins.split(',') if o.strip()]
 
-    CORS(app, resources={r"/api/*": {"origins": origins}})
+    CORS(app, resources={r"/api/*": {"origins": origins}}, supports_credentials=True)
 
     # Initialize extensions
     from app.extensions import mongo, bcrypt

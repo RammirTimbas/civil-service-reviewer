@@ -7,6 +7,7 @@ import { Loader2, Timer, AlertCircle, Trophy, Home, Search, ChevronLeft, Chevron
 import { useExamStore } from '@/store/use-exam-store'
 import { useRouter } from 'next/navigation'
 import api from '@/lib/api-client'
+import { useAuthStore } from '@/store/use-auth-store'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -31,12 +32,12 @@ export default function MockExamPage() {
   const [isStarted, setIsStarted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [results, setResults] = useState<{ score: number, total: number } | null>(null)
+  const user = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
 
   const handleStart = () => {
     setIsSubmitting(true)
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-
-    if (!token) {
+    if (!user) {
       api.get('/questions/mock')
         .then((res) => {
           if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
@@ -71,8 +72,7 @@ export default function MockExamPage() {
   const handleSubmit = async () => {
     if (!confirm('Submit exam?')) return
     setIsSubmitting(true)
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-    if (!token) {
+    if (!user) {
       setIsSubmitting(false)
       if (confirm('You must be signed in to submit exam results. Sign in now?')) {
         router.push('/(auth)/login')
@@ -91,7 +91,7 @@ export default function MockExamPage() {
     } catch (err: any) {
       if (err?.response?.status === 401) {
         alert('Session expired or unauthorized. Please sign in again.')
-        localStorage.removeItem('token')
+        await logout()
         router.push('/(auth)/login')
         return
       }

@@ -25,7 +25,7 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const { data } = await api.post('/auth/login', formData)
+      const { data } = await api.post('/auth/login', formData, { withCredentials: true })
       setAuth(data.user, data.token)
       router.push('/dashboard')
     } catch (err: any) {

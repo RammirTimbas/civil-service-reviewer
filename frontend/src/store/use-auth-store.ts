@@ -21,16 +21,27 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       setAuth: (user, token) => {
-        localStorage.setItem('token', token);
         set({ user, token });
       },
-      logout: () => {
-        localStorage.removeItem('token');
+      logout: async () => {
+        // call backend to clear HttpOnly cookie
+        try {
+          await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+          })
+        } catch (e) {}
+        try {
+          localStorage.removeItem('token');
+        } catch (e) {}
         set({ user: null, token: null });
       },
     }),
     {
       name: 'auth-storage',
+      // persist only the user object; do not persist JWT token
+      partialize: (state) => ({ user: state.user }),
     }
   )
 );

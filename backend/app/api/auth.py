@@ -20,7 +20,27 @@ def register():
 def login():
     data = request.get_json()
     result, status = AuthService.login_user(data)
+    # If successful, set HttpOnly cookie with access token
+    if status == 200 and 'token' in result:
+        resp = jsonify(result)
+        # cookie expiry: align with token expiry
+        access_expires = current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES')
+        try:
+            max_age = int(access_expires.total_seconds())
+        except Exception:
+            max_age = None
+        # set cookie; not secure for local dev unless using https; use SameSite Lax
+        resp.set_cookie('access_token', result['token'], httponly=True, samesite='Lax', secure=False, max_age=max_age)
+        return resp, 200
     return jsonify(result), status
+
+
+@auth_bp.route('/logout', methods=['POST'])
+@rate_limit
+def logout():
+    resp = jsonify({'message': 'Logged out'})
+    resp.set_cookie('access_token', '', expires=0)
+    return resp, 200
 
 @auth_bp.route('/google-login', methods=['POST'])
 @rate_limit
@@ -62,8 +82,7 @@ def google_login():
             )
 
         access_token = AuthService.generate_token(user['_id'])
-
-        return jsonify({
+        resp = jsonify({
             'token': access_token,
             'user': {
                 'id': str(user['_id']),
@@ -72,7 +91,14 @@ def google_login():
                 'role': user['role'],
                 'profile_picture': user.get('profile_picture')
             }
-        }), 200
+        })
+        access_expires = current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES')
+        try:
+            max_age = int(access_expires.total_seconds())
+        except Exception:
+            max_age = None
+        resp.set_cookie('access_token', access_token, httponly=True, samesite='Lax', secure=False, max_age=max_age)
+        return resp, 200
 
     except ValueError:
         return jsonify({'error': 'Invalid Google token'}), 401
