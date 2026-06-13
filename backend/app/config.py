@@ -9,6 +9,8 @@ class Config:
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
     FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+    # Next official civil service exam date in ISO format (YYYY-MM-DD)
+    EXAM_DATE = os.environ.get('EXAM_DATE', '')
 
 class DevelopmentConfig(Config):
     DEBUG = True

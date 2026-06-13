@@ -5,9 +5,46 @@ from app.models.session import ExamSessionSchema
 from bson.objectid import ObjectId
 import datetime
 import random
+from flask import current_app
 
 exams_bp = Blueprint('exams', __name__)
 session_schema = ExamSessionSchema()
+
+
+@exams_bp.route('/schedule', methods=['GET'])
+def get_exam_schedule():
+    # Returns configured exam date and simple status
+    exam_date_str = current_app.config.get('EXAM_DATE', '')
+    if not exam_date_str:
+        return jsonify({'error': 'No exam date configured'}), 404
+
+    try:
+        exam_date = datetime.datetime.fromisoformat(exam_date_str)
+    except Exception:
+        # try parsing YYYY-MM-DD
+        try:
+            exam_date = datetime.datetime.strptime(exam_date_str, '%Y-%m-%d')
+        except Exception:
+            return jsonify({'error': 'Invalid exam date format'}), 500
+
+    now = datetime.datetime.utcnow()
+    exam_day_start = datetime.datetime(exam_date.year, exam_date.month, exam_date.day)
+    delta = exam_day_start - now
+    days_left = max(0, delta.days)
+
+    if now.date() == exam_day_start.date():
+        status = 'today'
+    elif now < exam_day_start:
+        status = 'upcoming'
+    else:
+        status = 'passed'
+
+    return jsonify({
+        'exam_date': exam_day_start.isoformat(),
+        'days_left': days_left,
+        'status': status,
+        'readable': exam_day_start.strftime('%b %d, %Y')
+    }), 200
 
 @exams_bp.route('/start', methods=['POST'])
 @token_required
