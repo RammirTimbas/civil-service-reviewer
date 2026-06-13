@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from app.middleware.auth import token_required
 from app.extensions import mongo
 from bson.objectid import ObjectId
@@ -13,6 +13,27 @@ def get_current_user(current_user):
     if 'password' in current_user:
         del current_user['password']
     return jsonify(current_user), 200
+
+@users_bp.route('/me', methods=['PUT'])
+@token_required
+def update_current_user(current_user):
+    data = request.get_json()
+    allowed_fields = ['name'] # Add more fields as needed
+    update_data = {}
+
+    for field in allowed_fields:
+        if field in data:
+            update_data[field] = data[field]
+
+    if not update_data:
+        return jsonify({'error': 'No valid fields to update'}), 400
+
+    mongo.db.users.update_one(
+        {'_id': current_user['_id']},
+        {'$set': update_data}
+    )
+
+    return jsonify({'message': 'Profile updated successfully'}), 200
 
 @users_bp.route('/stats', methods=['GET'])
 @token_required

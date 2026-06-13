@@ -25,7 +25,10 @@ class AuthService:
             'password': hashed_password,
             'name': data['name'],
             'role': 'User',
-            'created_at': datetime.datetime.utcnow()
+            'created_at': datetime.datetime.utcnow(),
+            'total_questions_attempted': 0,
+            'total_correct': 0,
+            'study_streak': 0
         }).inserted_id
 
         return {'message': 'User registered successfully'}, 201
@@ -35,5 +38,13 @@ class AuthService:
         user = mongo.db.users.find_one({'email': data['email']})
         if user and bcrypt.check_password_hash(user['password'], data['password']):
             token = AuthService.generate_token(user['_id'])
-            return {'token': token, 'user': {'name': user['name'], 'email': user['email'], 'role': user['role']}}, 200
+            return {
+                'token': token,
+                'user': {
+                    'id': str(user['_id']),
+                    'name': user['name'],
+                    'email': user['email'],
+                    'role': user['role']
+                }
+            }, 200
         return {'error': 'Invalid credentials'}, 401

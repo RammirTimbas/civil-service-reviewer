@@ -53,12 +53,22 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-2">
-             <button className="text-slate-400 hover:text-slate-600 p-1">
+             <Link href="/settings" className={cn(
+               "p-1 rounded-md transition-colors",
+               pathname === '/settings' ? "text-blue-600 bg-blue-50/50" : "text-slate-400 hover:text-slate-600"
+             )}>
                <Settings className="w-3.5 h-3.5" />
-             </button>
-             <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 cursor-pointer">
-               <User className="w-3.5 h-3.5" />
-             </div>
+             </Link>
+             <Link href="/settings">
+                <div className={cn(
+                  "w-6 h-6 rounded-full border flex items-center justify-center cursor-pointer transition-all",
+                  pathname === '/settings'
+                    ? "bg-blue-600 border-blue-600 text-white"
+                    : "bg-slate-100 border-slate-200 text-slate-500"
+                )}>
+                  <User className="w-3.5 h-3.5" />
+                </div>
+             </Link>
           </div>
         </div>
       </nav>
@@ -84,6 +94,17 @@ export function Navbar() {
               </Link>
             )
           })}
+
+          <Link
+            href="/settings"
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 transition-all flex-1",
+              pathname === '/settings' ? "text-blue-600" : "text-slate-400"
+            )}
+          >
+            <User className={cn("w-4.5 h-4.5", pathname === '/settings' && "scale-105")} />
+            <span className="text-[9px] font-bold uppercase tracking-wider">Profile</span>
+          </Link>
         </div>
       </nav>
     </>
