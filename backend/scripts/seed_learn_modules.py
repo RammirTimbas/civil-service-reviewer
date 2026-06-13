@@ -14,8 +14,11 @@ from app.extensions import mongo
 def seed_learn_data():
     app = create_app()
     with app.app_context():
-        print("🧹 Cleaning existing questions...")
-        mongo.db.questions.delete_many({})
+        print("🧹 Preserving existing questions; adding learn-module questions (no delete).")
+        # NOTE: don't delete the entire questions collection here — the mock exam
+        # and other features rely on a broader seeded question set. This script
+        # should only insert learning-module-specific questions to avoid
+        # breaking the exam sampling logic.
 
         # 1. Create Reinforcement Questions first to get their IDs
         reinforcement_ids = []

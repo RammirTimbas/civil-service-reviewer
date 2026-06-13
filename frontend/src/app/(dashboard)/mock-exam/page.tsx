@@ -51,6 +51,7 @@ export default function MockExamPage() {
 
     api.post('/exams/start', { type: 'Mock' })
       .then((res) => {
+        console.log('exams/start response', res?.data)
         if (res && res.data) {
           const questionsPayload = res.data.questions || res.data
           if (Array.isArray(questionsPayload) && questionsPayload.length > 0) {
@@ -59,13 +60,26 @@ export default function MockExamPage() {
           }
         }
       })
-      .catch(() => alert('Failed to start exam.'))
+      .catch((err) => {
+        console.error('Failed to start exam', err)
+        const msg = err?.response?.data?.message || err?.response?.data?.error || err.message || 'Failed to start exam.'
+        alert(msg)
+      })
       .finally(() => setIsSubmitting(false))
   }
 
   const handleSubmit = async () => {
     if (!confirm('Submit exam?')) return
     setIsSubmitting(true)
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    if (!token) {
+      setIsSubmitting(false)
+      if (confirm('You must be signed in to submit exam results. Sign in now?')) {
+        router.push('/(auth)/login')
+      }
+      return
+    }
+
     try {
       const response = await api.post('/exams/submit', {
         type: 'Mock',
@@ -74,7 +88,13 @@ export default function MockExamPage() {
       })
       setResults(response.data)
       finishSession()
-    } catch (error) {
+    } catch (err: any) {
+      if (err?.response?.status === 401) {
+        alert('Session expired or unauthorized. Please sign in again.')
+        localStorage.removeItem('token')
+        router.push('/(auth)/login')
+        return
+      }
       alert('Submission failed.')
     } finally {
       setIsSubmitting(false)

@@ -23,13 +23,25 @@ def start_exam(current_user):
     if active_session:
         # If an active session already exists for this user, return its session_id
         # and the questions so the client can resume the existing session.
-        question_ids = [ObjectId(qid) for qid in active_session.get('questions', [])]
-        questions = list(mongo.db.questions.find({'_id': {'$in': question_ids}}))
-        return jsonify({
-            'message': 'Active session exists',
-            'session_id': str(active_session['_id']),
-            'questions': [{**q, 'id': str(q['_id']), '_id': None} for q in questions]
-        }), 200
+        stored_qids = active_session.get('questions', []) or []
+        questions = []
+        if stored_qids:
+            try:
+                question_ids = [ObjectId(qid) for qid in stored_qids]
+                questions = list(mongo.db.questions.find({'_id': {'$in': question_ids}}))
+            except Exception:
+                questions = []
+
+        # If the active session exists but has no valid questions (e.g., questions were deleted),
+        # remove the stale session and let the flow continue to create a fresh one below.
+        if not questions:
+            mongo.db.exam_sessions.delete_one({'_id': active_session['_id']})
+        else:
+            return jsonify({
+                'message': 'Active session exists',
+                'session_id': str(active_session['_id']),
+                'questions': [{**q, 'id': str(q['_id']), '_id': None} for q in questions]
+            }), 200
 
     category = data.get('category')
     query = {}
