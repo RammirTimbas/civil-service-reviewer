@@ -36,12 +36,14 @@ def create_app(config_name=None):
     from app.api.users import users_bp
     from app.api.progress import progress_bp
     from app.api.exams import exams_bp
+    from app.api.learn import learn_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(questions_bp, url_prefix='/api/questions')
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(progress_bp, url_prefix='/api/progress')
     app.register_blueprint(exams_bp, url_prefix='/api/exams')
+    app.register_blueprint(learn_bp, url_prefix='/api/learn')
 
     @app.route('/health')
     def health_check():

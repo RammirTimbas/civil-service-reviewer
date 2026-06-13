@@ -12,6 +12,27 @@ export interface Option {
   text: string;
 }
 
+export interface Concept {
+  title: string;
+  rule_explanation: string;
+  key_points?: string[];
+  heuristics?: string[];
+}
+
+export interface WorkedExample {
+  problem: string;
+  solution_steps: string[];
+  pattern_recognition_note?: string;
+}
+
+export interface LearningMetadata {
+  concept: Concept;
+  worked_example: WorkedExample;
+  guided_hint: string;
+  misconception_notes?: string;
+  reinforcement_question_ids?: string[];
+}
+
 export interface Question {
   id: string;
   text: string;
@@ -26,6 +47,7 @@ export interface Question {
   tags: string[];
   source?: string;
   version?: number;
+  learning_metadata?: LearningMetadata;
   metadata?: Record<string, any>;
 }
 
