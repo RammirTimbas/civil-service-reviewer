@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const protectedPrefixes = ['/dashboard', '/learn', '/mock-exam', '/practice', '/settings']
-
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   const token = req.cookies.get('access_token')?.value
@@ -17,14 +15,10 @@ export function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Protect certain prefixes server-side; if no cookie, redirect to login
-  if (protectedPrefixes.some(p => pathname.startsWith(p))) {
-    if (!token) {
-      const url = req.nextUrl.clone()
-      url.pathname = '/login'
-      return NextResponse.redirect(url)
-    }
-  }
+  // NOTE: avoid protecting internal app prefixes here to prevent
+  // server/client route segment mismatches during client-side navigation.
+  // Keep only the root redirect to dashboard to remove UI flash.
+  // API and backend routes should enforce auth server-side.
 
   return NextResponse.next()
 }
