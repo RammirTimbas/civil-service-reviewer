@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { QuestionCard } from '@/components/exam/question-card'
 
-type Category = 'Verbal Ability' | 'Numerical Reasoning' | 'Analytical Ability' | 'Clerical Operations' | 'General Information';
+type CategoryName = 'Verbal Ability' | 'Numerical Reasoning' | 'Analytical Ability' | 'Clerical Operations' | 'General Information';
 
 interface Topic {
   name: string;
@@ -51,16 +51,17 @@ export default function LearnModePage() {
   const [error, setError] = useState<string | null>(null)
 
   // Selection State
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<CategoryName | null>(null)
+  const [selectedCategoryValue, setSelectedCategoryValue] = useState<string | null>(null)
   const [topics, setTopics] = useState<Topic[]>([])
   const [loadingTopics, setLoadingTopics] = useState(false)
 
-  const categories: { name: Category; icon: any; color: string }[] = [
-    { name: 'Verbal Ability', icon: BookOpen, color: 'text-blue-600' },
-    { name: 'Numerical Reasoning', icon: Target, color: 'text-emerald-600' },
-    { name: 'Analytical Ability', icon: Lightbulb, color: 'text-purple-600' },
-    { name: 'Clerical Operations', icon: LayoutGrid, color: 'text-orange-600' },
-    { name: 'General Information', icon: Sparkles, color: 'text-amber-600' },
+  const categories: { name: CategoryName; value: string; icon: any; color: string }[] = [
+    { name: 'Verbal Ability', value: 'Verbal', icon: BookOpen, color: 'text-blue-600' },
+    { name: 'Numerical Reasoning', value: 'Numerical', icon: Target, color: 'text-emerald-600' },
+    { name: 'Analytical Ability', value: 'Analytical', icon: Lightbulb, color: 'text-purple-600' },
+    { name: 'Clerical Operations', value: 'Clerical', icon: LayoutGrid, color: 'text-orange-600' },
+    { name: 'General Information', value: 'General Information', icon: Sparkles, color: 'text-amber-600' },
   ]
 
   // Reset store when component unmounts
@@ -68,11 +69,10 @@ export default function LearnModePage() {
     return () => reset()
   }, [reset])
 
-  const fetchTopics = async (category: Category) => {
+  const fetchTopics = async (categoryValue: string) => {
     try {
       setLoadingTopics(true)
-      setSelectedCategory(category)
-      const response = await api.get(`/learn/topics?category=${encodeURIComponent(category)}`)
+      const response = await api.get(`/learn/topics?category=${encodeURIComponent(categoryValue)}`)
       setTopics(response.data)
     } catch (err) {
       console.error('Failed to load topics', err)
@@ -85,7 +85,7 @@ export default function LearnModePage() {
     try {
       setLoading(true)
       setError(null)
-      const response = await api.get(`/learn/session?category=${encodeURIComponent(selectedCategory!)}&subcategory=${encodeURIComponent(topicName)}`)
+      const response = await api.get(`/learn/session?category=${encodeURIComponent(selectedCategoryValue || '')}&subcategory=${encodeURIComponent(topicName)}`)
       startSession(response.data)
     } catch (err) {
       console.error('Failed to load learn session', err)
@@ -108,7 +108,7 @@ export default function LearnModePage() {
           {categories.map((cat) => (
             <button
               key={cat.name}
-              onClick={() => fetchTopics(cat.name)}
+              onClick={() => { setSelectedCategory(cat.name); setSelectedCategoryValue(cat.value); fetchTopics(cat.value) }}
               className="group flex items-center justify-between p-5 bg-white border border-slate-200 rounded-2xl hover:border-blue-500 hover:shadow-md transition-all text-left"
             >
               <div className="flex items-center gap-4">
